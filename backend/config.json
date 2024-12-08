@@ -1,0 +1,6 @@
+{
+  "model_path": "xgb_best_model.pkl",
+  "static_folder": "./static",
+  "log_level": "DEBUG",
+  "allowed_file_types": ["csv"]
+}
