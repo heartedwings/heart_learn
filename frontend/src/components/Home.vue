@@ -3,7 +3,7 @@
     <div class="home__main">
       <div class="home__title"><span>心</span>臓病Checker</div>
       <div class="home__graph">
-        <div v-for="n in 6" :key="n" :class="`cell cell-${n}`"></div>
+        <div v-for="num in 6" :key="num" class="cell"></div>
       </div>
       <div class="home__contents">
         <div class="home__download">
@@ -14,10 +14,7 @@
           正解率：{{ resultData ? resultData.accuracy : "-" }}
         </div>
         <div v-if="resultData">
-          <img
-            :src="resultData.confusion_matrix.image"
-            alt="Confusion Matrix"
-          />
+          <img :src="resultData.image" alt="Confusion Matrix" />
         </div>
         <div class="home__no-image" v-else>
           <img src="../assets/no_image.svg" alt="no_image" />
@@ -29,19 +26,29 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-axios.defaults.headers.get["Content-Type"] = "application/json";
-axios.defaults.headers.get["Access-Control-Allow-Origin"] = "*";
+interface ResultData {
+  accuracy: string;
+  confusion_matrix: Array<string>;
+  image: string;
+}
 
 const csvFile = ref<File>();
-const resultData = ref();
+const resultData = ref<ResultData>();
 
 const onCsvDownLoad = (event: Event) => {
   const input = event.target as HTMLInputElement;
   csvFile.value = input.files?.[0];
 };
 
+// ローカルストレージに画像を保存し、リアクティブに反映させる
+const saveImageToLocalStorage = (imageBase64: string) => {
+  localStorage.setItem("image", imageBase64);
+  if (resultData.value) resultData.value.image = imageBase64;
+};
+
+// CSVファイルをPOSTし、responseを受け取る
 const saveCsvFile = async () => {
   if (!csvFile.value) return;
   const data = new FormData();
@@ -56,11 +63,13 @@ const saveCsvFile = async () => {
       }
     );
     resultData.value = response.data.result;
-  } catch (error: any) {
-    console.error(
-      "Error:",
-      error.response ? error.response.data : error.message
-    );
+    saveImageToLocalStorage(response.data.result.confusion_matrix.image);
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      console.error("Error response:", error.response?.data || error.message);
+    } else {
+      console.error("Unexpected Error:", error);
+    }
   }
 };
 </script>
@@ -99,7 +108,7 @@ const saveCsvFile = async () => {
     display: flex;
     margin-top: 16px;
     width: 100%;
-    height: 170px;
+    height: 200px;
   }
 
   .cell {

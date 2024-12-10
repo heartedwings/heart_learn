@@ -7,6 +7,8 @@ import xgboost as xgb
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
 import os
+import base64
+from io import BytesIO
 
 
 def process_csv_and_predict(csv_path, output_folder):
@@ -41,21 +43,19 @@ def process_csv_and_predict(csv_path, output_folder):
     accuracy_percentage = accuracy * 100
     conf_matrix = confusion_matrix(y_test, predictions)
 
-    # 混同行列を可視化してPDFに保存
+    # 混同行列を可視化してPNGで保存
     plt.figure(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", cbar=False)
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     plt.title(f"Confusion Matrix\nAccuracy: {accuracy_percentage:.2f}%")
 
-    # PDF ファイルに保存
-    output_pdf = os.path.join(output_folder, "confusion_matrix.png")
-    plt.savefig(output_pdf, format="png")
-    plt.close()  # プロットを閉じてメモリを解放
-    image_url = f"/backend/outputs/confusion_matrix.png"
-
-    print(f"Accuracy: {accuracy_percentage:.2f}%")
-    print(f"Confusion Matrix:\n{conf_matrix}")
+    # 画像をBase64に変換して返す（そのまま画像保存すると表示できないため）
+    img_buf = BytesIO()
+    plt.savefig(img_buf, format="png")  # フォーマットは.PNG
+    img_buf.seek(0)
+    img_base64 = base64.b64encode(img_buf.read()).decode("utf-8")
+    img_buf.close()
 
     # 結果を保存
     output_file = os.path.join(output_folder, "result.csv")
@@ -65,15 +65,8 @@ def process_csv_and_predict(csv_path, output_folder):
     # 結果を返却
     return {
         "accuracy": accuracy_percentage,
-        "confusion_matrix": {"data": conf_matrix.tolist(), "image": image_url},
+        "confusion_matrix": {
+            "data": conf_matrix.tolist(),
+            "image": f"data:image/png;base64,{img_base64}",
+        },
     }
-
-
-if __name__ == "__main__":
-    # テスト用のコード
-    test_csv_path = "test_data.csv"  # テスト用CSVのパス
-    output_dir = "./output"  # 結果保存用ディレクトリ
-    os.makedirs(output_dir, exist_ok=True)  # ディレクトリが存在しない場合は作成
-
-    result = process_csv_and_predict(test_csv_path, output_dir)
-    print("Prediction Result:", result)

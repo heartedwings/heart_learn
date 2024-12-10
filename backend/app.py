@@ -44,7 +44,7 @@ def upload_csv():
         # エラーが発生した場合はスタックトレースをログに表示
         print(f"Error: {e}")
         traceback.print_exc()  # これで詳細なエラートレースを表示
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
