@@ -13,29 +13,57 @@
         <div class="home__result--accuracy">
           正解率：{{ resultData ? resultData.accuracy : "-" }}
         </div>
-        <div v-if="resultData">
-          <img :src="resultData.image" alt="Confusion Matrix" />
-        </div>
-        <div class="home__no-image" v-else>
-          <img src="../assets/no_image.svg" alt="no_image" />
-        </div>
+        <Tabs v-model="activeTab">
+          <template
+            v-for="(name, idx) in tabName"
+            :key="idx"
+            v-slot:[`tab-${idx}`]
+          >
+            <div v-show="resultData" class="home__image">
+              <img v-if="selectedImage" :src="selectedImage" :alt="name" />
+            </div>
+            <div v-show="!resultData" class="home__no-image">
+              <img src="../assets/no_image.svg" alt="no_image" />
+            </div>
+          </template>
+        </Tabs>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import axios, { AxiosError } from "axios";
+import Tabs from "./Tabs.vue";
 
 interface ResultData {
   accuracy: string;
-  confusion_matrix: Array<string>;
-  image: string;
+  confusion_matrix: {
+    data: Object;
+    image: string;
+  };
+  perm_importance: {
+    data: Object;
+    image: string;
+  };
+  shap: {
+    image: string;
+  };
+  learn_curve: {
+    image: string;
+  };
 }
 
 const csvFile = ref<File>();
 const resultData = ref<ResultData>();
+const activeTab = ref(0);
+const tabName = [
+  "Confusion Matrix",
+  "Permitation Importance",
+  "Learn Curve",
+  "Shap",
+];
 
 const onCsvDownLoad = (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -43,9 +71,10 @@ const onCsvDownLoad = (event: Event) => {
 };
 
 // ローカルストレージに画像を保存し、リアクティブに反映させる
-const saveImageToLocalStorage = (imageBase64: string) => {
-  localStorage.setItem("image", imageBase64);
-  if (resultData.value) resultData.value.image = imageBase64;
+const saveImagesToLocalStorage = (images: Record<string, string>) => {
+  Object.keys(images).forEach((key) => {
+    localStorage.setItem(key, images[key]);
+  });
 };
 
 // CSVファイルをPOSTし、responseを受け取る
@@ -63,7 +92,8 @@ const saveCsvFile = async () => {
       }
     );
     resultData.value = response.data.result;
-    saveImageToLocalStorage(response.data.result.confusion_matrix.image);
+
+    saveImagesToLocalStorage(response.data.result);
   } catch (error) {
     if (error instanceof AxiosError) {
       console.error("Error response:", error.response?.data || error.message);
@@ -72,6 +102,25 @@ const saveCsvFile = async () => {
     }
   }
 };
+
+// タブのインデックスに基づいて表示する画像を決定
+const selectedImage = computed(() => {
+  // resultDataがない場合は空文字を返却
+  if (!resultData.value) return "";
+
+  switch (activeTab.value) {
+    case 0:
+      return resultData.value.confusion_matrix.image;
+    case 1:
+      return resultData.value.perm_importance.image;
+    case 2:
+      return resultData.value.learn_curve.image;
+    case 3:
+      return resultData.value.shap.image;
+    default:
+      return "";
+  }
+});
 </script>
 
 <style lang="scss" scoped>
@@ -79,16 +128,12 @@ const saveCsvFile = async () => {
   position: relative;
   background-color: #241f1f;
   color: #ffffff;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 
   &__main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100%;
-    margin: 20px 16px 32px 16px;
-    overflow: hidden;
   }
 
   &__title {
@@ -108,7 +153,7 @@ const saveCsvFile = async () => {
     display: flex;
     margin-top: 16px;
     width: 100%;
-    height: 200px;
+    height: 170px;
   }
 
   .cell {
@@ -157,7 +202,18 @@ const saveCsvFile = async () => {
   }
 
   &__result--accuracy {
-    margin-top: 16px;
+    margin-top: 32px;
+  }
+
+  &__image {
+    height: 500px;
+    width: 660px;
+    margin: auto;
+    margin-top: 20px;
+    background-color: rgb(255, 255, 255);
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   &__no-image {

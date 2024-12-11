@@ -10,6 +10,9 @@ import os
 import base64
 from io import BytesIO
 
+from functions.get_perm_importance import get_perm_importance
+from functions.get_learning_curve import get_learning_curve
+
 
 def process_csv_and_predict(csv_path, output_folder):
     """
@@ -43,6 +46,9 @@ def process_csv_and_predict(csv_path, output_folder):
     accuracy_percentage = accuracy * 100
     conf_matrix = confusion_matrix(y_test, predictions)
 
+    perm_importance = get_perm_importance(loaded_xgb_best_model, X_test, y_test, data)
+    learn_curve = get_learning_curve(loaded_xgb_best_model, X_test, y_test)
+
     # 混同行列を可視化してPNGで保存
     plt.figure(figsize=(8, 6))
     sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", cbar=False)
@@ -69,4 +75,10 @@ def process_csv_and_predict(csv_path, output_folder):
             "data": conf_matrix.tolist(),
             "image": f"data:image/png;base64,{img_base64}",
         },
+        "perm_importance": {
+            "data": perm_importance["importance_data"],
+            "image": perm_importance["p_i_image"],
+        },
+        "shap": {"image": perm_importance["s_image"]},
+        "learn_curve": {"image": learn_curve["l_c_image"]},
     }
