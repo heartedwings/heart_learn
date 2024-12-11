@@ -1,5 +1,9 @@
 <template>
   <div class="home">
+    <div v-if="isLoading" class="overlay">
+      <div class="spinner"></div>
+      <span>Loading...</span>
+    </div>
     <div class="home__main">
       <div class="home__title"><span>心</span>臓病Checker</div>
       <div class="home__graph">
@@ -55,6 +59,7 @@ interface ResultData {
   };
 }
 
+const isLoading = ref(false);
 const csvFile = ref<File>();
 const resultData = ref<ResultData>();
 const activeTab = ref(0);
@@ -83,6 +88,7 @@ const saveCsvFile = async () => {
   const data = new FormData();
   data.append("file", csvFile.value, "test_result.csv");
 
+  isLoading.value = true;
   try {
     const response = await axios.post(
       "http://127.0.0.1:5000/upload_csv",
@@ -100,6 +106,8 @@ const saveCsvFile = async () => {
     } else {
       console.error("Unexpected Error:", error);
     }
+  } finally {
+    isLoading.value = false; // ローディング終了
   }
 };
 
@@ -124,6 +132,42 @@ const selectedImage = computed(() => {
 </script>
 
 <style lang="scss" scoped>
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(128, 128, 128, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border-width: 4px;
+  border-style: solid;
+  border-color: #fff transparent;
+  animation: spin 2s infinite linear forwards;
+  &::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border-radius: 50%;
+    border-width: 4px;
+    border-style: solid;
+    border-color: #fff transparent;
+    animation: spin 0.7s infinite linear reverse; /* 逆回転 */
+  }
+}
+
 .home {
   position: relative;
   background-color: #241f1f;
@@ -166,7 +210,7 @@ const selectedImage = computed(() => {
 
   &__contents {
     max-width: 670px;
-    margin-top: 20px;
+    margin: 20px 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -227,6 +271,27 @@ const selectedImage = computed(() => {
     justify-content: center;
     align-items: center;
     color: white;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinner_loading_text {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
